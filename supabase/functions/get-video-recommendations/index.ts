@@ -1,11 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+/* ===================== CORS ===================== */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
 
+/* ===================== YOUTUBE HELPER ===================== */
+async function fetchBestYouTubeVideo(query: string) {
+  const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+  if (!YOUTUBE_API_KEY || !query) return null;
+
+  const url =
+    "https://www.googleapis.com/youtube/v3/search?" +
+    new URLSearchParams({
+      part: "snippet",
+      q: query,
+      type: "video",
+      maxResults: "1",
+      videoEmbeddable: "true",
+      relevanceLanguage: "en",
+      safeSearch: "strict",
+      key: YOUTUBE_API_KEY,
+    });
+
+  const res = await fetch(url);
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  const video = data.items?.[0];
+
+  if (!video?.id?.videoId) return null;
+
+  return {
+    videoId: video.id.videoId,
+    embedUrl: `https://www.youtube.com/embed/${video.id.videoId}`,
+  };
+}
+
+/* ===================== SERVER ===================== */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,42 +57,34 @@ serve(async (req) => {
     const systemPrompt = `
 You are an expert academic curriculum analyzer and exam preparation specialist.
 
-Your job is to convert university syllabi into exam-oriented learning plans.
+Convert university syllabi into structured, exam-oriented learning plans.
 
-⚠️ VIDEO AVAILABILITY RULES (STRICT) ⚠️
-Mark hasVideo = true ONLY IF high-quality structured videos exist on:
+⚠️ VIDEO RULES (STRICT) ⚠️
+If hasVideo = true, you MUST also provide:
+- videoPlatform
+- videoSearchQuery
 
-Allowed platforms ONLY:
-1. YouTube
-2. CodeAcademy
-3. NPTEL / SWAYAM
-4. Indian YouTube education channels
+Allowed platforms:
+- youtube
+- nptel
+- codeacademy
 
-Trusted Indian channels:
-- Gate Smashers
-- Neso Academy
-- Knowledge Gate
-- Jenny’s Lectures CS/IT
-- CodeWithHarry
-- Apna College
-- Telusko
-- Abdul Bari
-- NPTEL (official)
+Rules for videoSearchQuery:
+- Clear topic name
+- Exam-oriented keywords
+- Suitable for YouTube/NPTEL search
+- Prefer Indian exam-focused content
 
-Rules:
-- Coding / algorithms / programming → youtube OR codeacademy
-- Engineering theory → indian-youtube OR nptel
-- Advanced / niche / research topics → hasVideo = false
-- Introductory concepts → hasVideo = true
-- DO NOT assume videos exist for all topics
+If no reliable video exists:
+- hasVideo = false
+- videoPlatform = "none"
+- videoSearchQuery = ""
 
 Practice rules:
 - Numericals, derivations, coding → hasPractice = true
-- Pure theory → hasPractice = false (unless common numericals exist)
+- Pure theory → hasPractice = false (unless numericals exist)
 
-Be conservative and realistic.
-
-Return STRICT JSON only. No explanations.
+Return STRICT JSON only.
 `;
 
     /* ===================== USER PROMPT ===================== */
@@ -66,9 +92,9 @@ Return STRICT JSON only. No explanations.
 Generate a structured, exam-oriented learning plan.
 
 IMPORTANT:
-- Mark hasVideo = true ONLY if videos exist on allowed platforms
-- Prefer Indian YouTube channels & NPTEL
-- Accuracy > quantity
+- Videos must be PER TOPIC
+- Use videoSearchQuery (not channels, not URLs)
+- Be conservative and accurate
 
 Subject: ${subjectName}
 University: ${universityName || "Not specified"}
@@ -83,7 +109,7 @@ ${syllabus}
       {
         method: "POST",
         headers: {
-          Authorization: \`Bearer \${LOVABLE_API_KEY}\`,
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -130,12 +156,12 @@ ${syllabus}
                                   type: "string",
                                   enum: [
                                     "youtube",
-                                    "indian-youtube",
                                     "nptel",
                                     "codeacademy",
                                     "none",
                                   ],
                                 },
+                                videoSearchQuery: { type: "string" },
                                 hasPractice: { type: "boolean" },
                               },
                               required: [
@@ -145,6 +171,7 @@ ${syllabus}
                                 "importance",
                                 "hasVideo",
                                 "videoPlatform",
+                                "videoSearchQuery",
                                 "hasPractice",
                               ],
                               additionalProperties: false,
@@ -177,18 +204,32 @@ ${syllabus}
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(\`AI Error \${response.status}: \${errorText}\`);
+      throw new Error(`AI Error ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall) {
-      throw new Error("Invalid AI response");
-    }
+    if (!toolCall) throw new Error("Invalid AI response");
 
     const learningPlan = JSON.parse(toolCall.function.arguments);
 
+    /* ===================== AUTO-EMBED BEST YOUTUBE VIDEO ===================== */
+    for (const unit of learningPlan.units) {
+      for (const topic of unit.topics) {
+        if (topic.hasVideo && topic.videoPlatform === "youtube") {
+          const video = await fetchBestYouTubeVideo(
+            topic.videoSearchQuery
+          );
+          topic.videoId = video?.videoId || "";
+          topic.embedUrl = video?.embedUrl || "";
+        } else {
+          topic.videoId = "";
+          topic.embedUrl = "";
+        }
+      }
+    }
+
+    /* ===================== RESPONSE ===================== */
     return new Response(
       JSON.stringify({ success: true, learningPlan }),
       {
