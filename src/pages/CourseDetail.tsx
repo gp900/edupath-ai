@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   Minus,
   Loader2,
-  FileText
+  FileText,
+  Youtube,
+  ExternalLink
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
@@ -375,10 +377,73 @@ export default function CourseDetail() {
                     )}
                   </div>
                 </TabsContent>
-                <TabsContent value="resources" className="p-6">
-                  <p className="text-muted-foreground">
-                    Additional learning resources and study materials will appear here.
+                <TabsContent value="resources" className="p-6 space-y-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Youtube className="w-5 h-5 text-destructive" />
+                    YouTube Videos
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Find educational videos about this topic on YouTube.
                   </p>
+                  <div className="space-y-3">
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " " + planData.subjectName + " lecture")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
+                        <Youtube className="w-5 h-5 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                          Video Lectures
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Search "{selectedTopic.name}" lectures
+                        </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " tutorial explained")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <PlayCircle className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                          Tutorials & Explanations
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Easy-to-understand tutorials
+                        </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " solved examples problems")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-success" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                          Solved Examples
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Practice problems with solutions
+                        </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                  </div>
                 </TabsContent>
                 <TabsContent value="notes" className="p-6">
                   <p className="text-muted-foreground">
