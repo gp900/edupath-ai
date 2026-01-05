@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, FileText, Loader2, GraduationCap, Target, BookOpen, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Syllabus() {
   const [subjectName, setSubjectName] = useState("");
@@ -27,15 +28,38 @@ export default function Syllabus() {
 
     setLoading(true);
     
-    // Simulate AI processing (will be replaced with actual AI call)
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-learning-plan', {
+        body: { subjectName, universityName, syllabus }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Store the learning plan in sessionStorage for the learning plan page
+      sessionStorage.setItem('generatedLearningPlan', JSON.stringify(data.learningPlan));
+      
       toast({
         title: "Learning Plan Generated!",
         description: "Your exam-oriented study roadmap is ready.",
       });
-      navigate("/dashboard/learning-plan/1");
-    }, 2000);
+      
+      navigate("/dashboard/learning-plan/generated");
+    } catch (error) {
+      console.error("Error generating learning plan:", error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate learning plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
