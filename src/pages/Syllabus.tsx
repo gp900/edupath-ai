@@ -7,8 +7,10 @@ import { Sparkles, FileText, Loader2, GraduationCap, Target, BookOpen, AlertTria
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Syllabus() {
+  const { user } = useAuth();
   const [subjectName, setSubjectName] = useState("");
   const [universityName, setUniversityName] = useState("");
   const [syllabus, setSyllabus] = useState("");
@@ -26,30 +28,61 @@ export default function Syllabus() {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to generate and save your learning plan.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
     setLoading(true);
     
     try {
+      // Generate learning plan with AI
       const { data, error } = await supabase.functions.invoke('generate-learning-plan', {
         body: { subjectName, universityName, syllabus }
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      const learningPlan = data.learningPlan;
 
-      // Store the learning plan in sessionStorage for the learning plan page
-      sessionStorage.setItem('generatedLearningPlan', JSON.stringify(data.learningPlan));
+      // Save subject to database
+      const { data: subjectData, error: subjectError } = await supabase
+        .from('subjects')
+        .insert({
+          user_id: user.id,
+          name: subjectName,
+          university: universityName || null,
+          syllabus_text: syllabus,
+          total_estimated_hours: learningPlan.totalEstimatedHours
+        })
+        .select()
+        .single();
+
+      if (subjectError) throw subjectError;
+
+      // Save learning plan to database
+      const { error: planError } = await supabase
+        .from('learning_plans')
+        .insert({
+          subject_id: subjectData.id,
+          user_id: user.id,
+          plan_data: learningPlan
+        });
+
+      if (planError) throw planError;
       
       toast({
         title: "Learning Plan Generated!",
         description: "Your exam-oriented study roadmap is ready.",
       });
       
-      navigate("/dashboard/learning-plan/generated");
+      navigate(`/dashboard/learning-plan/${subjectData.id}`);
     } catch (error) {
       console.error("Error generating learning plan:", error);
       toast({

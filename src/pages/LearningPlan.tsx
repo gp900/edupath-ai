@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { 
   BookOpen, Clock, Target, CheckCircle2, Circle, 
   ChevronDown, ChevronRight, Play, FileText, Video,
-  AlertTriangle, Flame, Minus, ArrowLeft
+  AlertTriangle, Flame, Minus, ArrowLeft, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 type ImportanceLevel = "high" | "medium" | "low";
 
@@ -16,7 +19,6 @@ interface Topic {
   name: string;
   duration: string;
   importance: ImportanceLevel;
-  completed: boolean;
   hasVideo: boolean;
   hasPractice: boolean;
 }
@@ -64,36 +66,73 @@ const getImportanceBadge = (importance: ImportanceLevel) => {
 export default function LearningPlan() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [expandedUnits, setExpandedUnits] = useState<string[]>([]);
   const [planData, setPlanData] = useState<LearningPlanData | null>(null);
+  const [subjectId, setSubjectId] = useState<string | null>(null);
   const [completedTopics, setCompletedTopics] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id === "generated") {
-      const stored = sessionStorage.getItem('generatedLearningPlan');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Add completed: false to all topics if not present
-        const dataWithCompleted = {
-          ...parsed,
-          units: parsed.units.map((unit: Unit) => ({
-            ...unit,
-            topics: unit.topics.map((topic: Topic) => ({
-              ...topic,
-              completed: topic.completed ?? false
-            }))
-          }))
-        };
-        setPlanData(dataWithCompleted);
-        // Expand first unit by default
-        if (parsed.units?.length > 0) {
-          setExpandedUnits([parsed.units[0].id]);
+    if (!user || !id) return;
+    
+    const fetchLearningPlan = async () => {
+      setLoading(true);
+      try {
+        // Fetch learning plan from database
+        const { data: planResult, error: planError } = await supabase
+          .from('learning_plans')
+          .select('*, subjects(*)')
+          .eq('subject_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (planError) throw planError;
+
+        if (!planResult) {
+          navigate("/dashboard/syllabus");
+          return;
         }
-      } else {
-        navigate("/dashboard/syllabus");
+
+        setSubjectId(id);
+        const planDataParsed = planResult.plan_data as unknown as LearningPlanData;
+        setPlanData(planDataParsed);
+        
+        // Expand first unit by default
+        const units = planDataParsed.units;
+        if (units?.length > 0) {
+          setExpandedUnits([units[0].id]);
+        }
+
+        // Fetch topic progress
+        const { data: progressData, error: progressError } = await supabase
+          .from('topic_progress')
+          .select('topic_id')
+          .eq('subject_id', id)
+          .eq('user_id', user.id)
+          .eq('completed', true);
+
+        if (progressError) throw progressError;
+
+        const completedSet = new Set(progressData?.map(p => p.topic_id) || []);
+        setCompletedTopics(completedSet);
+
+      } catch (error) {
+        console.error("Error fetching learning plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load learning plan.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [id, navigate]);
+    };
+
+    fetchLearningPlan();
+  }, [id, user, navigate, toast]);
 
   const toggleUnit = (unitId: string) => {
     setExpandedUnits(prev => 
@@ -103,17 +142,72 @@ export default function LearningPlan() {
     );
   };
 
-  const toggleTopicComplete = (topicId: string) => {
+  const toggleTopicComplete = async (topicId: string) => {
+    if (!user || !subjectId) return;
+
+    const isCurrentlyCompleted = completedTopics.has(topicId);
+    
+    // Optimistic update
     setCompletedTopics(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(topicId)) {
+      if (isCurrentlyCompleted) {
         newSet.delete(topicId);
       } else {
         newSet.add(topicId);
       }
       return newSet;
     });
+
+    try {
+      if (isCurrentlyCompleted) {
+        // Delete progress
+        await supabase
+          .from('topic_progress')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('subject_id', subjectId)
+          .eq('topic_id', topicId);
+      } else {
+        // Upsert progress
+        await supabase
+          .from('topic_progress')
+          .upsert({
+            user_id: user.id,
+            subject_id: subjectId,
+            topic_id: topicId,
+            completed: true,
+            completed_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,subject_id,topic_id'
+          });
+      }
+    } catch (error) {
+      console.error("Error updating progress:", error);
+      // Revert on error
+      setCompletedTopics(prev => {
+        const newSet = new Set(prev);
+        if (isCurrentlyCompleted) {
+          newSet.add(topicId);
+        } else {
+          newSet.delete(topicId);
+        }
+        return newSet;
+      });
+      toast({
+        title: "Error",
+        description: "Failed to update progress.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!planData) {
     return (
@@ -134,7 +228,7 @@ export default function LearningPlan() {
 
   const totalTopics = planData.units.reduce((acc, unit) => acc + unit.topics.length, 0);
   const completedCount = completedTopics.size;
-  const progressPercent = Math.round((completedCount / totalTopics) * 100);
+  const progressPercent = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
 
   const highPriorityCount = planData.units.reduce(
     (acc, unit) => acc + unit.topics.filter(t => t.importance === "high").length,
@@ -234,7 +328,7 @@ export default function LearningPlan() {
       <div className="space-y-4">
         {planData.units.map((unit) => {
           const unitCompletedCount = unit.topics.filter(t => completedTopics.has(t.id)).length;
-          const unitProgress = Math.round((unitCompletedCount / unit.topics.length) * 100);
+          const unitProgress = unit.topics.length > 0 ? Math.round((unitCompletedCount / unit.topics.length) * 100) : 0;
           const isExpanded = expandedUnits.includes(unit.id);
 
           return (
@@ -338,7 +432,7 @@ export default function LearningPlan() {
                         </div>
 
                         {/* Action */}
-                        <Link to={`/dashboard/courses/1?topic=${topic.id}`}>
+                        <Link to={`/dashboard/courses/${subjectId}?topic=${topic.id}`}>
                           <Button 
                             size="sm" 
                             variant={isCompleted ? "outline" : "default"}
