@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Sparkles, ArrowRight } from "lucide-react";
+import { GraduationCap, Sparkles, ArrowRight, Target, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Hero() {
@@ -15,9 +15,9 @@ export function Hero() {
       <div className="container relative z-10 mx-auto px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-full text-sm font-medium mb-8">
-            <Sparkles className="w-4 h-4" />
-            AI-Powered Learning Platform
+          <div className="inline-flex items-center gap-2 bg-warning/10 text-warning px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <AlertTriangle className="w-4 h-4" />
+            Avoid Backlogs & ATKT
           </div>
           
           {/* Main heading */}
@@ -25,12 +25,13 @@ export function Hero() {
             Transform Your{" "}
             <span className="text-primary">Syllabus</span>
             <br />
-            Into a Learning Journey
+            Into Exam Success
           </h1>
           
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            Paste your university curriculum and let AI create a personalized study roadmap with videos, practice questions, and progress tracking.
+            Paste your university curriculum and let AI create a personalized, exam-oriented learning path with 
+            curriculum mapping, topic prioritization, and outcome-based study materials.
           </p>
           
           {/* CTA Buttons */}
@@ -38,7 +39,7 @@ export function Hero() {
             <Link to="/auth">
               <Button variant="hero" size="xl" className="group">
                 <GraduationCap className="w-5 h-5" />
-                Start Learning Free
+                Start Exam Preparation
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -49,6 +50,22 @@ export function Hero() {
             </Link>
           </div>
           
+          {/* Value Props */}
+          <div className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary" />
+              Outcome-Based Learning
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              AI-Powered Curriculum Mapping
+            </div>
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              University Exam Patterns
+            </div>
+          </div>
+          
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
             <div className="text-center">
@@ -57,11 +74,11 @@ export function Hero() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-foreground">500+</div>
-              <div className="text-sm text-muted-foreground">Courses</div>
+              <div className="text-sm text-muted-foreground">Syllabi Mapped</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-foreground">95%</div>
-              <div className="text-sm text-muted-foreground">Success Rate</div>
+              <div className="text-sm text-muted-foreground">Pass Rate</div>
             </div>
           </div>
         </div>

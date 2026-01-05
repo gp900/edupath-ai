@@ -10,7 +10,10 @@ export function Footer() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">EduPath AI</span>
+            <div>
+              <span className="text-xl font-bold">ExamPath</span>
+              <p className="text-xs opacity-60">Avoid Backlogs</p>
+            </div>
           </div>
           
           <nav className="flex flex-wrap justify-center gap-8 text-sm">
@@ -21,7 +24,7 @@ export function Footer() {
           </nav>
           
           <p className="text-sm opacity-60">
-            © 2025 EduPath AI. All rights reserved.
+            © {new Date().getFullYear()} ExamPath. All rights reserved.
           </p>
         </div>
       </div>

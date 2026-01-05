@@ -1,36 +1,36 @@
-import { BookOpen, Video, ClipboardCheck, Award, TrendingUp, Brain } from "lucide-react";
+import { BookOpen, Video, ClipboardCheck, Award, TrendingUp, Brain, Target, FileQuestion } from "lucide-react";
 
 const features = [
   {
     icon: Brain,
-    title: "AI-Powered Roadmaps",
-    description: "Paste your syllabus and watch AI transform it into a structured learning plan with units, topics, and schedules."
+    title: "AI Curriculum Mapping",
+    description: "Paste your university syllabus and watch AI transform it into a structured, exam-oriented learning plan with units, topics, and priority indicators."
+  },
+  {
+    icon: Target,
+    title: "Exam Importance Indicators",
+    description: "Every topic is tagged with exam importance (High/Medium/Low) based on previous year patterns and frequently asked questions."
   },
   {
     icon: Video,
     title: "Curated Video Lessons",
-    description: "Each topic comes with embedded YouTube videos carefully selected to match your curriculum content."
+    description: "Each topic comes with handpicked YouTube videos that match your university curriculum for effective outcome-based learning."
+  },
+  {
+    icon: FileQuestion,
+    title: "Previous Year Questions",
+    description: "Practice with PYQs, important theory questions, numerical problems, and MCQs based on actual university exam patterns."
   },
   {
     icon: ClipboardCheck,
-    title: "Practice Questions",
-    description: "Test your understanding with auto-generated practice questions and assignments for every topic."
-  },
-  {
-    icon: BookOpen,
     title: "Mock Tests",
-    description: "Prepare for exams with comprehensive mock tests that simulate real exam conditions."
+    description: "Assess your exam readiness with university-pattern mock tests that simulate real exam conditions and time limits."
   },
   {
     icon: TrendingUp,
-    title: "Progress Tracking",
-    description: "Monitor your learning journey with detailed analytics and progress visualizations."
+    title: "Academic Performance Tracking",
+    description: "Monitor your exam readiness with detailed analytics showing weak areas, topic-wise progress, and improvement suggestions."
   },
-  {
-    icon: Award,
-    title: "Completion Certificates",
-    description: "Earn certificates upon completing courses to showcase your achievements."
-  }
 ];
 
 export function Features() {
@@ -39,10 +39,10 @@ export function Features() {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-foreground mb-4">
-            Everything You Need to Excel
+            Everything for Academic Excellence
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Our AI-powered platform provides all the tools to transform your university syllabus into an effective learning experience.
+            Our AI-powered platform provides all the tools to transform your university syllabus into an effective, exam-oriented learning experience.
           </p>
         </div>
         

@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Syllabus from "./pages/Syllabus";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import LearningPlan from "./pages/LearningPlan";
 import Assignments from "./pages/Assignments";
 import Tests from "./pages/Tests";
 import Certificates from "./pages/Certificates";
@@ -32,8 +33,11 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="syllabus" element={<Syllabus />} />
+            <Route path="subjects" element={<Courses />} />
             <Route path="courses" element={<Courses />} />
             <Route path="courses/:id" element={<CourseDetail />} />
+            <Route path="learning-plan/:id" element={<LearningPlan />} />
+            <Route path="exam-practice" element={<Assignments />} />
             <Route path="assignments" element={<Assignments />} />
             <Route path="tests" element={<Tests />} />
             <Route path="certificates" element={<Certificates />} />

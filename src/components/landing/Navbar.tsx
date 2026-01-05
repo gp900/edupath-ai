@@ -15,7 +15,10 @@ export function Navbar() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">EduPath AI</span>
+            <div>
+              <span className="text-xl font-bold text-foreground">ExamPath</span>
+              <p className="text-xs text-muted-foreground">Avoid Backlogs</p>
+            </div>
           </Link>
           
           {/* Desktop Nav */}
@@ -34,7 +37,7 @@ export function Navbar() {
               <Button variant="ghost">Sign In</Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button>Get Started</Button>
+              <Button>Start Preparation</Button>
             </Link>
           </div>
           
@@ -73,7 +76,7 @@ export function Navbar() {
                 <Button variant="ghost" className="w-full justify-start">Sign In</Button>
               </Link>
               <Link to="/auth?mode=signup" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">Get Started</Button>
+                <Button className="w-full">Start Preparation</Button>
               </Link>
             </div>
           </div>

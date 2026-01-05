@@ -1,29 +1,29 @@
-import { FileText, Sparkles, BookOpen, Trophy } from "lucide-react";
+import { FileText, Sparkles, BookOpen, Trophy, Target } from "lucide-react";
 
 const steps = [
   {
     icon: FileText,
     step: "01",
     title: "Paste Your Syllabus",
-    description: "Copy and paste your university course curriculum or syllabus into our platform."
+    description: "Copy and paste your official university curriculum or syllabus document into our platform."
   },
   {
     icon: Sparkles,
     step: "02",
-    title: "AI Generates Your Roadmap",
-    description: "Our AI analyzes the content and creates a structured learning plan with topics and schedules."
+    title: "AI Maps Your Curriculum",
+    description: "Our AI analyzes the syllabus, identifies units and topics, and assigns exam importance indicators."
   },
   {
-    icon: BookOpen,
+    icon: Target,
     step: "03",
-    title: "Learn at Your Pace",
-    description: "Watch curated videos, complete practice questions, and take mock tests for each topic."
+    title: "Follow Personalized Learning Path",
+    description: "Study with curated videos, PYQs, and practice materials aligned to your university's exam pattern."
   },
   {
     icon: Trophy,
     step: "04",
-    title: "Earn Your Certificate",
-    description: "Complete all topics and tests to earn a certificate of completion for your course."
+    title: "Achieve Exam Readiness",
+    description: "Take mock tests, track your performance, and achieve the confidence to clear your exams."
   }
 ];
 
@@ -33,10 +33,10 @@ export function HowItWorks() {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-foreground mb-4">
-            How It Works
+            Your Path to Academic Success
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get started in minutes with our simple 4-step process
+            Get started in minutes with our simple 4-step process for exam preparation
           </p>
         </div>
         
