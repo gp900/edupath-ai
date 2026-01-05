@@ -1,22 +1,25 @@
-import { Award, Download, Share2, Calendar } from "lucide-react";
+import { Award, Download, Share2, Calendar, GraduationCap, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const certificates = [
   {
     id: 1,
-    title: "Database Management Systems",
+    title: "Data Structures & Algorithms",
+    university: "Mumbai University",
     completedDate: "Dec 15, 2024",
-    credentialId: "CERT-DB-2024-001",
-    grade: "A",
-    hours: 16
+    credentialId: "CERT-DSA-2024-001",
+    examReadiness: "92%",
+    hours: 40
   },
   {
     id: 2,
-    title: "Introduction to Python Programming",
+    title: "Database Management Systems",
+    university: "Mumbai University",
     completedDate: "Nov 28, 2024",
-    credentialId: "CERT-PY-2024-042",
-    grade: "A+",
-    hours: 20
+    credentialId: "CERT-DBMS-2024-042",
+    examReadiness: "88%",
+    hours: 35
   },
 ];
 
@@ -25,8 +28,8 @@ export default function Certificates() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Certificates</h1>
-        <p className="text-muted-foreground">Your earned certificates and achievements</p>
+        <h1 className="text-3xl font-bold text-foreground">Completion Certificates</h1>
+        <p className="text-muted-foreground">Your academic achievements and course completion credentials</p>
       </div>
 
       {/* Stats */}
@@ -48,19 +51,19 @@ export default function Certificates() {
               <Calendar className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">36</p>
-              <p className="text-sm text-muted-foreground">Total Hours</p>
+              <p className="text-2xl font-bold text-foreground">75</p>
+              <p className="text-sm text-muted-foreground">Study Hours</p>
             </div>
           </div>
         </div>
         <div className="bg-card border border-border rounded-xl p-6 col-span-2 lg:col-span-1">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
-              <Award className="w-6 h-6 text-success" />
+              <Target className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">A+</p>
-              <p className="text-sm text-muted-foreground">Average Grade</p>
+              <p className="text-2xl font-bold text-foreground">90%</p>
+              <p className="text-sm text-muted-foreground">Avg. Exam Readiness</p>
             </div>
           </div>
         </div>
@@ -78,16 +81,17 @@ export default function Certificates() {
               <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Award className="w-10 h-10 text-warning" />
+                    <GraduationCap className="w-10 h-10 text-warning" />
                   </div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                    Certificate of Completion
+                    Certificate of Academic Completion
                   </p>
-                  <h3 className="text-lg font-bold text-foreground mb-4">
+                  <h3 className="text-lg font-bold text-foreground mb-2">
                     {cert.title}
                   </h3>
+                  <p className="text-sm text-muted-foreground mb-4">{cert.university}</p>
                   <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                    <span>Grade: <strong className="text-foreground">{cert.grade}</strong></span>
+                    <span>Exam Readiness: <strong className="text-success">{cert.examReadiness}</strong></span>
                     <span>•</span>
                     <span>{cert.hours} hours</span>
                   </div>
@@ -127,9 +131,11 @@ export default function Certificates() {
           <Award className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-foreground mb-2">No certificates yet</h3>
           <p className="text-muted-foreground mb-6">
-            Complete a course to earn your first certificate
+            Complete a subject's learning plan to earn your first certificate
           </p>
-          <Button>Browse Courses</Button>
+          <Link to="/dashboard/subjects">
+            <Button>View My Subjects</Button>
+          </Link>
         </div>
       )}
 
@@ -141,13 +147,15 @@ export default function Certificates() {
           </div>
           <div className="flex-1">
             <h3 className="text-xl font-semibold text-foreground mb-2">
-              Complete More Courses
+              Continue Your Academic Journey
             </h3>
             <p className="text-muted-foreground">
-              Finish your active courses to earn more certificates and showcase your achievements.
+              Complete more subjects to earn certificates and demonstrate your exam readiness.
             </p>
           </div>
-          <Button size="lg">View Active Courses</Button>
+          <Link to="/dashboard/subjects">
+            <Button size="lg">View Active Subjects</Button>
+          </Link>
         </div>
       </div>
     </div>

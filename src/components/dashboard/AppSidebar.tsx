@@ -7,10 +7,11 @@ import {
   Award, 
   Settings,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  Target
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,12 +32,12 @@ import { Button } from "@/components/ui/button";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "New Course", url: "/dashboard/syllabus", icon: FileText },
-  { title: "My Courses", url: "/dashboard/courses", icon: BookOpen },
+  { title: "Add Syllabus", url: "/dashboard/syllabus", icon: FileText },
+  { title: "My Subjects", url: "/dashboard/subjects", icon: BookOpen },
 ];
 
 const learningItems = [
-  { title: "Assignments", url: "/dashboard/assignments", icon: ClipboardCheck },
+  { title: "Exam Practice", url: "/dashboard/exam-practice", icon: ClipboardCheck },
   { title: "Mock Tests", url: "/dashboard/tests", icon: FileQuestion },
   { title: "Certificates", url: "/dashboard/certificates", icon: Award },
 ];
@@ -44,7 +45,6 @@ const learningItems = [
 export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,7 +65,10 @@ export function AppSidebar() {
             <GraduationCap className="w-6 h-6 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">EduPath AI</span>
+            <div>
+              <span className="text-lg font-bold text-sidebar-foreground">ExamPath</span>
+              <p className="text-xs text-muted-foreground">Avoid Backlogs</p>
+            </div>
           )}
         </div>
       </SidebarHeader>
@@ -95,7 +98,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Learning</SidebarGroupLabel>
+          <SidebarGroupLabel>Exam Preparation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {learningItems.map((item) => (

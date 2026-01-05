@@ -1,47 +1,56 @@
-import { BookOpen, Clock, MoreVertical, Play } from "lucide-react";
+import { BookOpen, Clock, MoreVertical, Play, Target, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
-const courses = [
+const subjects = [
   { 
     id: 1,
     title: "Data Structures & Algorithms", 
-    description: "Master fundamental data structures and algorithmic problem solving",
+    description: "Arrays, Linked Lists, Trees, Graphs, Sorting, and Searching algorithms",
+    university: "Mumbai University",
     progress: 75, 
-    topics: 12, 
-    completed: 9,
-    duration: "24 hours",
+    topics: 20, 
+    completed: 15,
+    estimatedHours: 40,
+    highPriority: 8,
     status: "in-progress"
   },
   { 
     id: 2,
-    title: "Machine Learning Fundamentals", 
-    description: "Introduction to ML concepts, algorithms, and practical applications",
+    title: "Database Management Systems", 
+    description: "ER Diagrams, Normalization, SQL, Transactions, and Concurrency Control",
+    university: "Mumbai University",
     progress: 45, 
-    topics: 15, 
-    completed: 7,
-    duration: "32 hours",
+    topics: 18, 
+    completed: 8,
+    estimatedHours: 35,
+    highPriority: 6,
     status: "in-progress"
   },
   { 
     id: 3,
-    title: "Web Development with React", 
-    description: "Build modern web applications using React and related technologies",
+    title: "Operating Systems", 
+    description: "Process Management, Memory Management, File Systems, and Scheduling",
+    university: "Mumbai University",
     progress: 90, 
-    topics: 10, 
-    completed: 9,
-    duration: "20 hours",
+    topics: 15, 
+    completed: 14,
+    estimatedHours: 32,
+    highPriority: 5,
     status: "in-progress"
   },
   { 
     id: 4,
-    title: "Database Management Systems", 
-    description: "Learn SQL, database design, and management principles",
+    title: "Computer Networks", 
+    description: "OSI Model, TCP/IP, Routing Protocols, and Network Security",
+    university: "Mumbai University",
     progress: 100, 
-    topics: 8, 
-    completed: 8,
-    duration: "16 hours",
+    topics: 12, 
+    completed: 12,
+    estimatedHours: 28,
+    highPriority: 0,
     status: "completed"
   },
 ];
@@ -52,36 +61,36 @@ export default function Courses() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Courses</h1>
-          <p className="text-muted-foreground">Track and continue your learning progress</p>
+          <h1 className="text-3xl font-bold text-foreground">My Subjects</h1>
+          <p className="text-muted-foreground">Track your curriculum-mapped learning progress and exam readiness</p>
         </div>
         <Link to="/dashboard/syllabus">
-          <Button>Create New Course</Button>
+          <Button>Add New Subject</Button>
         </Link>
       </div>
 
-      {/* Courses List */}
+      {/* Subjects List */}
       <div className="space-y-4">
-        {courses.map((course) => (
+        {subjects.map((subject) => (
           <div 
-            key={course.id}
+            key={subject.id}
             className="bg-card border border-border rounded-xl p-6 hover:shadow-lg hover:border-primary/30 transition-all"
           >
             <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-              {/* Course Icon */}
+              {/* Subject Icon */}
               <div className="w-16 h-16 bg-accent rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="w-8 h-8 text-primary" />
               </div>
 
-              {/* Course Info */}
+              {/* Subject Info */}
               <div className="flex-1 space-y-2">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
-                      {course.title}
+                      {subject.title}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-1">
-                      {course.description}
+                      {subject.description}
                     </p>
                   </div>
                   <Button variant="ghost" size="icon" className="shrink-0">
@@ -90,37 +99,47 @@ export default function Courses() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <Badge variant="outline">{subject.university}</Badge>
                   <span className="flex items-center gap-1">
                     <BookOpen className="w-4 h-4" />
-                    {course.completed}/{course.topics} topics
+                    {subject.completed}/{subject.topics} topics
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {course.duration}
+                    {subject.estimatedHours} hours
                   </span>
-                  {course.status === "completed" && (
-                    <span className="px-2 py-0.5 bg-success/10 text-success rounded-full text-xs font-medium">
-                      Completed
+                  {subject.highPriority > 0 && (
+                    <span className="flex items-center gap-1 text-destructive">
+                      <Flame className="w-4 h-4" />
+                      {subject.highPriority} high-priority pending
                     </span>
+                  )}
+                  {subject.status === "completed" && (
+                    <Badge className="bg-success/10 text-success">
+                      Exam Ready
+                    </Badge>
                   )}
                 </div>
 
                 {/* Progress */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium text-foreground">{course.progress}%</span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Target className="w-4 h-4" />
+                      Exam Readiness
+                    </span>
+                    <span className="font-medium text-foreground">{subject.progress}%</span>
                   </div>
-                  <Progress value={course.progress} className="h-2" />
+                  <Progress value={subject.progress} className="h-2" />
                 </div>
               </div>
 
               {/* Action */}
               <div className="lg:ml-4">
-                <Link to={`/dashboard/courses/${course.id}`}>
-                  <Button variant={course.progress === 100 ? "outline" : "default"} className="gap-2 w-full lg:w-auto">
+                <Link to={`/dashboard/learning-plan/${subject.id}`}>
+                  <Button variant={subject.progress === 100 ? "outline" : "default"} className="gap-2 w-full lg:w-auto">
                     <Play className="w-4 h-4" />
-                    {course.progress === 100 ? "Review" : "Continue"}
+                    {subject.progress === 100 ? "Review" : "Continue"}
                   </Button>
                 </Link>
               </div>
@@ -129,15 +148,15 @@ export default function Courses() {
         ))}
       </div>
 
-      {courses.length === 0 && (
+      {subjects.length === 0 && (
         <div className="text-center py-16 bg-card border border-border rounded-xl">
           <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">No courses yet</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No subjects yet</h3>
           <p className="text-muted-foreground mb-6">
-            Create your first course by pasting your syllabus
+            Add your first subject by pasting your university syllabus
           </p>
           <Link to="/dashboard/syllabus">
-            <Button>Create Your First Course</Button>
+            <Button>Add Your First Subject</Button>
           </Link>
         </div>
       )}
