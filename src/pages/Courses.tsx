@@ -1,61 +1,161 @@
-import { BookOpen, Clock, MoreVertical, Play, Target, Flame } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Clock, MoreVertical, Play, Target, Flame, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const subjects = [
-  { 
-    id: 1,
-    title: "Data Structures & Algorithms", 
-    description: "Arrays, Linked Lists, Trees, Graphs, Sorting, and Searching algorithms",
-    university: "Mumbai University",
-    progress: 75, 
-    topics: 20, 
-    completed: 15,
-    estimatedHours: 40,
-    highPriority: 8,
-    status: "in-progress"
-  },
-  { 
-    id: 2,
-    title: "Database Management Systems", 
-    description: "ER Diagrams, Normalization, SQL, Transactions, and Concurrency Control",
-    university: "Mumbai University",
-    progress: 45, 
-    topics: 18, 
-    completed: 8,
-    estimatedHours: 35,
-    highPriority: 6,
-    status: "in-progress"
-  },
-  { 
-    id: 3,
-    title: "Operating Systems", 
-    description: "Process Management, Memory Management, File Systems, and Scheduling",
-    university: "Mumbai University",
-    progress: 90, 
-    topics: 15, 
-    completed: 14,
-    estimatedHours: 32,
-    highPriority: 5,
-    status: "in-progress"
-  },
-  { 
-    id: 4,
-    title: "Computer Networks", 
-    description: "OSI Model, TCP/IP, Routing Protocols, and Network Security",
-    university: "Mumbai University",
-    progress: 100, 
-    topics: 12, 
-    completed: 12,
-    estimatedHours: 28,
-    highPriority: 0,
-    status: "completed"
-  },
-];
+interface Subject {
+  id: string;
+  name: string;
+  university: string | null;
+  total_estimated_hours: number;
+  created_at: string;
+  progress: number;
+  completedTopics: number;
+  totalTopics: number;
+  highPriorityPending: number;
+}
 
 export default function Courses() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchSubjects = async () => {
+      try {
+        // Fetch subjects with their learning plans
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from('subjects')
+          .select(`
+            id,
+            name,
+            university,
+            total_estimated_hours,
+            created_at,
+            learning_plans (plan_data)
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (subjectsError) throw subjectsError;
+
+        // Fetch topic progress for all subjects
+        const { data: progressData, error: progressError } = await supabase
+          .from('topic_progress')
+          .select('subject_id, topic_id, completed')
+          .eq('user_id', user.id)
+          .eq('completed', true);
+
+        if (progressError) throw progressError;
+
+        // Calculate progress for each subject
+        const subjectsWithProgress = subjectsData?.map(subject => {
+          const plan = subject.learning_plans?.[0]?.plan_data as any;
+          const units = plan?.units || [];
+          
+          let totalTopics = 0;
+          let highPriorityCount = 0;
+          
+          units.forEach((unit: any) => {
+            totalTopics += unit.topics?.length || 0;
+            unit.topics?.forEach((topic: any) => {
+              if (topic.importance === 'high') highPriorityCount++;
+            });
+          });
+
+          const completedTopicIds = progressData
+            ?.filter(p => p.subject_id === subject.id)
+            .map(p => p.topic_id) || [];
+          
+          const completedTopics = completedTopicIds.length;
+          const progress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+          
+          // Count high priority pending
+          let highPriorityPending = 0;
+          units.forEach((unit: any) => {
+            unit.topics?.forEach((topic: any) => {
+              if (topic.importance === 'high' && !completedTopicIds.includes(topic.id)) {
+                highPriorityPending++;
+              }
+            });
+          });
+
+          return {
+            id: subject.id,
+            name: subject.name,
+            university: subject.university,
+            total_estimated_hours: subject.total_estimated_hours,
+            created_at: subject.created_at,
+            progress,
+            completedTopics,
+            totalTopics,
+            highPriorityPending
+          };
+        }) || [];
+
+        setSubjects(subjectsWithProgress);
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load subjects.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubjects();
+  }, [user, toast]);
+
+  const handleDelete = async (subjectId: string) => {
+    try {
+      const { error } = await supabase
+        .from('subjects')
+        .delete()
+        .eq('id', subjectId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setSubjects(prev => prev.filter(s => s.id !== subjectId));
+      toast({
+        title: "Subject deleted",
+        description: "The subject and its learning plan have been removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete subject.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -87,34 +187,46 @@ export default function Courses() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
-                      {subject.title}
+                      {subject.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                      {subject.description}
-                    </p>
                   </div>
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <MoreVertical className="w-5 h-5" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="shrink-0">
+                        <MoreVertical className="w-5 h-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleDelete(subject.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Subject
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <Badge variant="outline">{subject.university}</Badge>
+                  {subject.university && (
+                    <Badge variant="outline">{subject.university}</Badge>
+                  )}
                   <span className="flex items-center gap-1">
                     <BookOpen className="w-4 h-4" />
-                    {subject.completed}/{subject.topics} topics
+                    {subject.completedTopics}/{subject.totalTopics} topics
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {subject.estimatedHours} hours
+                    {subject.total_estimated_hours} hours
                   </span>
-                  {subject.highPriority > 0 && (
+                  {subject.highPriorityPending > 0 && (
                     <span className="flex items-center gap-1 text-destructive">
                       <Flame className="w-4 h-4" />
-                      {subject.highPriority} high-priority pending
+                      {subject.highPriorityPending} high-priority pending
                     </span>
                   )}
-                  {subject.status === "completed" && (
+                  {subject.progress === 100 && (
                     <Badge className="bg-success/10 text-success">
                       Exam Ready
                     </Badge>
