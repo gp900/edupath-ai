@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -19,12 +20,20 @@ import {
   Loader2,
   FileText,
   Youtube,
-  ExternalLink
+  ExternalLink,
+  Save,
+  PenLine
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+
+interface VideoRecommendation {
+  title: string;
+  searchQuery: string;
+  description: string;
+}
 
 type ImportanceLevel = "high" | "medium" | "low";
 
@@ -88,6 +97,11 @@ export default function CourseDetail() {
   const [openUnits, setOpenUnits] = useState<string[]>([]);
   const [completedTopics, setCompletedTopics] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [topicNotes, setTopicNotes] = useState<Record<string, string>>({});
+  const [currentNote, setCurrentNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [videoRecommendations, setVideoRecommendations] = useState<VideoRecommendation[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -145,16 +159,24 @@ export default function CourseDetail() {
           if (foundUnitId) setOpenUnits([foundUnitId]);
         }
 
-        // Fetch completed topics
+        // Fetch topic progress with notes
         const { data: progressData, error: progressError } = await supabase
           .from('topic_progress')
-          .select('topic_id')
+          .select('topic_id, completed, notes')
           .eq('subject_id', id)
-          .eq('user_id', user.id)
-          .eq('completed', true);
+          .eq('user_id', user.id);
 
         if (progressError) throw progressError;
-        setCompletedTopics(new Set(progressData?.map(p => p.topic_id) || []));
+        setCompletedTopics(new Set(progressData?.filter(p => p.completed).map(p => p.topic_id) || []));
+        
+        // Build notes map
+        const notesMap: Record<string, string> = {};
+        progressData?.forEach(p => {
+          if ((p as any).notes) {
+            notesMap[(p as any).topic_id] = (p as any).notes;
+          }
+        });
+        setTopicNotes(notesMap);
 
       } catch (error) {
         console.error("Error fetching course data:", error);
@@ -233,6 +255,78 @@ export default function CourseDetail() {
         description: "Failed to update progress.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Load note when topic changes
+  useEffect(() => {
+    if (selectedTopic) {
+      setCurrentNote(topicNotes[selectedTopic.id] || "");
+    }
+  }, [selectedTopic, topicNotes]);
+
+  // Fetch video recommendations when topic changes
+  useEffect(() => {
+    if (!selectedTopic || !planData) return;
+    
+    const fetchVideos = async () => {
+      setLoadingVideos(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-video-recommendations', {
+          body: { topicName: selectedTopic.name, subjectName: planData.subjectName }
+        });
+        
+        if (error) throw error;
+        if (data?.recommendations) {
+          setVideoRecommendations(data.recommendations);
+        }
+      } catch (error) {
+        console.error("Error fetching video recommendations:", error);
+        // Fallback recommendations
+        setVideoRecommendations([
+          { title: "Lecture", searchQuery: `${selectedTopic.name} ${planData.subjectName} lecture`, description: "University lecture" },
+          { title: "Tutorial", searchQuery: `${selectedTopic.name} tutorial explained`, description: "Step-by-step tutorial" },
+          { title: "Examples", searchQuery: `${selectedTopic.name} solved examples`, description: "Practice problems" }
+        ]);
+      } finally {
+        setLoadingVideos(false);
+      }
+    };
+    
+    fetchVideos();
+  }, [selectedTopic?.id, planData?.subjectName]);
+
+  const saveNote = async () => {
+    if (!user || !id || !selectedTopic) return;
+    
+    setSavingNote(true);
+    try {
+      await supabase
+        .from('topic_progress')
+        .upsert({
+          user_id: user.id,
+          subject_id: id,
+          topic_id: selectedTopic.id,
+          notes: currentNote,
+          completed: completedTopics.has(selectedTopic.id)
+        }, {
+          onConflict: 'user_id,subject_id,topic_id'
+        });
+      
+      setTopicNotes(prev => ({ ...prev, [selectedTopic.id]: currentNote }));
+      toast({
+        title: "Saved",
+        description: "Your notes have been saved.",
+      });
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save notes.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -377,77 +471,88 @@ export default function CourseDetail() {
                     )}
                   </div>
                 </TabsContent>
-                <TabsContent value="resources" className="p-6 space-y-4">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2">
-                    <Youtube className="w-5 h-5 text-destructive" />
-                    YouTube Videos
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Find educational videos about this topic on YouTube.
-                  </p>
+                <TabsContent value="resources" className="p-6 space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2">
+                      <Youtube className="w-5 h-5 text-destructive" />
+                      YouTube Videos
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      AI-recommended educational videos for this topic.
+                    </p>
+                  </div>
+                  
+                  {/* Embedded YouTube Search */}
+                  <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted">
+                    <iframe
+                      src={`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(selectedTopic.name + " " + planData.subjectName + " lecture tutorial")}`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Videos for ${selectedTopic.name}`}
+                    />
+                  </div>
+                  
+                  {/* Video Recommendations */}
                   <div className="space-y-3">
-                    <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " " + planData.subjectName + " lecture")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
-                    >
-                      <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
-                        <Youtube className="w-5 h-5 text-destructive" />
+                    {loadingVideos ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Loading recommendations...</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                          Video Lectures
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Search "{selectedTopic.name}" lectures
-                        </p>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </a>
-                    <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " tutorial explained")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
-                    >
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <PlayCircle className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                          Tutorials & Explanations
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Easy-to-understand tutorials
-                        </p>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </a>
-                    <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " solved examples problems")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
-                    >
-                      <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-success" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                          Solved Examples
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Practice problems with solutions
-                        </p>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </a>
+                    ) : (
+                      videoRecommendations.map((rec, index) => (
+                        <a
+                          key={index}
+                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(rec.searchQuery)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
+                        >
+                          <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
+                            <Youtube className="w-5 h-5 text-destructive" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                              {rec.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {rec.description}
+                            </p>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                        </a>
+                      ))
+                    )}
                   </div>
                 </TabsContent>
-                <TabsContent value="notes" className="p-6">
-                  <p className="text-muted-foreground">
-                    Take notes as you study. Your notes will be saved automatically.
+                <TabsContent value="notes" className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-foreground flex items-center gap-2">
+                      <PenLine className="w-5 h-5" />
+                      Your Notes
+                    </h3>
+                    <Button 
+                      onClick={saveNote} 
+                      size="sm" 
+                      disabled={savingNote}
+                    >
+                      {savingNote ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Write your study notes here... Include key points, formulas, and concepts to remember."
+                    value={currentNote}
+                    onChange={(e) => setCurrentNote(e.target.value)}
+                    className="min-h-[300px] resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Notes are saved per topic and will be available when you return.
                   </p>
                 </TabsContent>
               </Tabs>
