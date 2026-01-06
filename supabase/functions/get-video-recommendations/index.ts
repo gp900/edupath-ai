@@ -8,34 +8,135 @@ const corsHeaders = {
 };
 
 /* ===================== YOUTUBE HELPER ===================== */
+
+// Validate video details using YouTube Videos API
+async function getVideoDetails(videoIds: string[], apiKey: string) {
+  if (!videoIds.length) return [];
+
+  const url =
+    "https://www.googleapis.com/youtube/v3/videos?" +
+    new URLSearchParams({
+      part: "status,contentDetails,snippet",
+      id: videoIds.join(","),
+      key: apiKey,
+    });
+
+  const res = await fetch(url);
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  return data.items || [];
+}
+
+// Parse ISO 8601 duration to seconds
+function parseDuration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || "0", 10);
+  const minutes = parseInt(match[2] || "0", 10);
+  const seconds = parseInt(match[3] || "0", 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+// Score video based on educational relevance
+function scoreVideo(video: any): number {
+  let score = 0;
+  const title = (video.snippet?.title || "").toLowerCase();
+  const description = (video.snippet?.description || "").toLowerCase();
+  const duration = parseDuration(video.contentDetails?.duration || "");
+
+  // Prefer videos between 10-40 minutes (600-2400 seconds)
+  if (duration >= 600 && duration <= 2400) {
+    score += 30;
+  } else if (duration >= 300 && duration <= 3600) {
+    score += 15;
+  }
+
+  // Educational keywords boost
+  const eduKeywords = ["lecture", "tutorial", "explained", "exam", "study", "learn", "course", "class", "education", "university", "college", "nptel", "gate", "concept"];
+  for (const keyword of eduKeywords) {
+    if (title.includes(keyword)) score += 10;
+    if (description.includes(keyword)) score += 3;
+  }
+
+  // Penalize shorts and very short videos
+  if (duration < 120) score -= 50;
+
+  return score;
+}
+
 async function fetchBestYouTubeVideo(query: string) {
   const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
   if (!YOUTUBE_API_KEY || !query) return null;
 
-  const url =
+  // Step 1: Search for multiple videos
+  const searchUrl =
     "https://www.googleapis.com/youtube/v3/search?" +
     new URLSearchParams({
       part: "snippet",
-      q: query,
+      q: query + " lecture tutorial explained",
       type: "video",
-      maxResults: "1",
+      maxResults: "10",
       videoEmbeddable: "true",
       relevanceLanguage: "en",
       safeSearch: "strict",
       key: YOUTUBE_API_KEY,
     });
 
-  const res = await fetch(url);
-  if (!res.ok) return null;
+  const searchRes = await fetch(searchUrl);
+  if (!searchRes.ok) {
+    console.error("YouTube search failed:", await searchRes.text());
+    return null;
+  }
 
-  const data = await res.json();
-  const video = data.items?.[0];
+  const searchData = await searchRes.json();
+  const searchItems = searchData.items || [];
 
-  if (!video?.id?.videoId) return null;
+  if (!searchItems.length) return null;
+
+  // Step 2: Get video IDs and fetch detailed info
+  const videoIds = searchItems
+    .map((item: any) => item.id?.videoId)
+    .filter(Boolean);
+
+  if (!videoIds.length) return null;
+
+  const videoDetails = await getVideoDetails(videoIds, YOUTUBE_API_KEY);
+
+  // Step 3: Filter for embeddable, public, processed videos
+  const validVideos = videoDetails.filter((video: any) => {
+    const status = video.status;
+    if (!status) return false;
+
+    const isEmbeddable = status.embeddable === true;
+    const isPublic = status.privacyStatus === "public";
+    const isProcessed = status.uploadStatus === "processed";
+
+    return isEmbeddable && isPublic && isProcessed;
+  });
+
+  if (!validVideos.length) {
+    console.log("No valid embeddable videos found for query:", query);
+    return null;
+  }
+
+  // Step 4: Score and sort videos
+  const scoredVideos = validVideos
+    .map((video: any) => ({
+      video,
+      score: scoreVideo(video),
+    }))
+    .sort((a: any, b: any) => b.score - a.score);
+
+  // Step 5: Return the best video
+  const bestVideo = scoredVideos[0].video;
+  const videoId = bestVideo.id;
+
+  console.log(`Selected video: ${bestVideo.snippet?.title} (score: ${scoredVideos[0].score})`);
 
   return {
-    videoId: video.id.videoId,
-    embedUrl: `https://www.youtube.com/embed/${video.id.videoId}`,
+    videoId,
+    embedUrl: `https://www.youtube.com/embed/${videoId}`,
   };
 }
 
