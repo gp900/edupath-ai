@@ -2,3 +2,6 @@ project_id = "abyuiltuxwlzllrwwuqp"
 
 [functions.generate-learning-plan]
 verify_jwt = false
+
+[functions.get-video-recommendations]
+verify_jwt = false
