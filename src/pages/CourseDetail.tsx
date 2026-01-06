@@ -33,6 +33,8 @@ interface VideoRecommendation {
   title: string;
   searchQuery: string;
   description: string;
+  embedUrl?: string;
+  videoId?: string;
 }
 
 type ImportanceLevel = "high" | "medium" | "low";
@@ -478,53 +480,77 @@ export default function CourseDetail() {
                       YouTube Videos
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      AI-recommended educational videos for this topic.
+                      AI-verified embeddable educational videos for this topic.
                     </p>
                   </div>
                   
-                  {/* Embedded YouTube Search */}
-                  <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted">
-                    <iframe
-                      src={`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(selectedTopic.name + " " + planData.subjectName + " lecture tutorial")}`}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      title={`Videos for ${selectedTopic.name}`}
-                    />
-                  </div>
-                  
-                  {/* Video Recommendations */}
-                  <div className="space-y-3">
-                    {loadingVideos ? (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Loading recommendations...</span>
+                  {/* Video Content */}
+                  {loadingVideos ? (
+                    <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                        <span className="text-sm">Finding verified playable videos...</span>
                       </div>
-                    ) : (
-                      videoRecommendations.map((rec, index) => (
+                    </div>
+                  ) : videoRecommendations.length > 0 && videoRecommendations[0].embedUrl ? (
+                    <>
+                      {/* Verified Embedded YouTube Video */}
+                      <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted">
+                        <iframe
+                          src={videoRecommendations[0].embedUrl}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={videoRecommendations[0].title || `Video for ${selectedTopic.name}`}
+                        />
+                      </div>
+                      
+                      {/* Video Info */}
+                      <div className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg">
+                        <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
+                          <Youtube className="w-5 h-5 text-destructive" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">
+                            {videoRecommendations[0].title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ✓ Verified embeddable • Educational content
+                          </p>
+                        </div>
                         <a
-                          key={index}
-                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(rec.searchQuery)}`}
+                          href={`https://www.youtube.com/watch?v=${videoRecommendations[0].videoId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg hover:bg-accent transition-colors group"
+                          className="p-2 hover:bg-background rounded-lg transition-colors"
                         >
-                          <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
-                            <Youtube className="w-5 h-5 text-destructive" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                              {rec.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {rec.description}
-                            </p>
-                          </div>
                           <ExternalLink className="w-4 h-4 text-muted-foreground" />
                         </a>
-                      ))
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* No verified video available */
+                    <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3 text-muted-foreground text-center p-6">
+                        <Youtube className="w-12 h-12 opacity-30" />
+                        <div>
+                          <p className="font-medium">No playable video available</p>
+                          <p className="text-sm mt-1">
+                            We couldn't find a verified embeddable video for this topic.
+                          </p>
+                        </div>
+                        <a
+                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTopic.name + " " + planData.subjectName + " lecture tutorial")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-primary hover:underline mt-2"
+                        >
+                          <span>Search on YouTube</span>
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value="notes" className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
